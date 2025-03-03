@@ -8,6 +8,17 @@ import os
 import glob
 
 
+def delete_log_files():
+    """Deletes all log files in the current directory."""
+    log_files = glob.glob("vm_*.log")
+    for log_file in log_files:
+        try:
+            os.remove(log_file)
+            print(f"Deleted log file: {log_file}")
+        except Exception as e:
+            print(f"Error deleting log file {log_file}: {e}")
+
+
 class VirtualMachine:
     def __init__(self, vm_id, port, peer_info):
         """
@@ -219,4 +230,5 @@ def main():
 
 
 if __name__ == "__main__":
+    delete_log_files()
     main()
