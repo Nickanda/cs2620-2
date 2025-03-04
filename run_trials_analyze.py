@@ -189,22 +189,5 @@ def main():
     
     print("All trials completed. Analysis plots saved in", args.output_dir)
     
-    # Write a lab notebook summary file.
-    lab_notebook_path = os.path.join(args.output_dir, "lab_notebook.txt")
-    with open(lab_notebook_path, "w") as f:
-        f.write("Lab Notebook Summary\n")
-        f.write("====================\n")
-        f.write(f"Number of trials: {args.num_trials}\n")
-        f.write(f"Run time per trial: {args.run_time} seconds\n")
-        f.write(f"Variation mode: {args.variation_mode}\n")
-        f.write(f"Internal event probability: {args.internal_prob}\n")
-        f.write("\nObservations and Design Decisions:\n")
-        f.write(" - Note the size of the jumps in the logical clock values across events.\n")
-        f.write(" - Document any observed drift between local logical clocks (using the system time).\n")
-        f.write(" - Discuss the impact of clock cycle variations and the event probability settings on the message queue lengths and clock gaps.\n")
-        f.write(" - Add any interesting observations and reflections on the simulation behavior here.\n")
-    
-    print("Lab notebook saved at", lab_notebook_path)
-
 if __name__ == '__main__':
     main()

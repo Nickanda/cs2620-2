@@ -8,7 +8,7 @@ The simulation parameters (run time, log directory, variation mode, and internal
 event probability) are provided as command-line arguments.
 
 Simulation Details:
- - Each VM’s clock rate is determined by the variation_mode:
+ - Each VM's clock rate is determined by the variation_mode:
      - "order": Clock rates vary from 1 to 6 ticks per second.
      - "small": Clock rates vary from 2 to 3 ticks per second.
  - At each tick, a VM will either perform an internal event or send a message,
