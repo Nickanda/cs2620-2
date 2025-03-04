@@ -1,3 +1,29 @@
+#!/usr/bin/env python3
+"""
+main.py
+
+This script runs a distributed system simulation using three virtual machines.
+Each VM maintains a Lamport-style logical clock and communicates with its peers.
+The simulation parameters (run time, log directory, variation mode, and internal
+event probability) are provided as command-line arguments.
+
+Simulation Details:
+ - Each VM’s clock rate is determined by the variation_mode:
+     - "order": Clock rates vary from 1 to 6 ticks per second.
+     - "small": Clock rates vary from 2 to 3 ticks per second.
+ - At each tick, a VM will either perform an internal event or send a message,
+   based on the probability specified by internal_prob.
+ - For sending events, if more than one peer is available, the VM randomly
+   chooses to send to one or both peers.
+ - All events are logged in files with the format:
+     <system time> | <event type> | LC: <logical_clock> | <details>
+   which is compatible with run_trials_and_analyze.py.
+ - Prior to running, any previous log files in the log directory are deleted.
+ 
+Usage Example:
+    python main.py --run_time 60 --log_dir trial_1 --variation_mode order --internal_prob 0.7
+"""
+
 import socket
 import threading
 import time
@@ -6,11 +32,11 @@ import json
 import queue
 import os
 import glob
+import argparse
 
-
-def delete_log_files():
-    """Deletes all log files in the current directory."""
-    log_files = glob.glob("vm_*.log")
+def delete_log_files(log_dir):
+    """Deletes all log files in the specified log directory matching vm_*.log."""
+    log_files = glob.glob(os.path.join(log_dir, "vm_*.log"))
     for log_file in log_files:
         try:
             os.remove(log_file)
@@ -18,24 +44,28 @@ def delete_log_files():
         except Exception as e:
             print(f"Error deleting log file {log_file}: {e}")
 
-
 class VirtualMachine:
-    def __init__(self, vm_id, port, peer_info):
+    def __init__(self, vm_id, port, peer_info, log_dir, clock_rate_range, internal_prob):
         """
-        vm_id: an identifier for this virtual machine.
-        port: the port number on which this VM will listen.
-        peer_info: a dict mapping peer IDs to (ip, port) tuples.
+        vm_id: Identifier for this VM.
+        port: Port number to listen on.
+        peer_info: Dictionary mapping peer IDs to (ip, port) tuples.
+        log_dir: Directory to write log files.
+        clock_rate_range: Tuple (min, max) for random clock ticks per second.
+        internal_prob: Probability that an event is internal (0 to 1).
         """
         self.vm_id = vm_id
         self.port = port
         self.peer_info = peer_info  # Peers: {peer_id: (ip, port)}
-        self.clock_rate = random.randint(1, 6)
+        self.clock_rate = random.randint(clock_rate_range[0], clock_rate_range[1])
+        self.internal_prob = internal_prob
         self.logical_clock = 0
         self.message_queue = queue.Queue()
         self.running = True
 
         # Open a log file for writing events.
-        self.log_file = open(f"vm_{vm_id}.log", "a")
+        self.log_file_path = os.path.join(log_dir, f"vm_{vm_id}.log")
+        self.log_file = open(self.log_file_path, "a")
 
         # Dictionary to hold client sockets for sending messages to peers.
         self.peer_sockets = {}
@@ -144,39 +174,52 @@ class VirtualMachine:
                     "RECEIVE", f"From: {sender}, QueueLen: {self.message_queue.qsize()}"
                 )
             else:
-                # No message received; generate an event.
-                event = random.randint(1, 10)
-                if event == 1:
-                    # Send to first peer (lowest peer id).
-                    peer_id = sorted(self.peer_info.keys())[0]
-                    message = {"sender": self.vm_id, "clock": self.logical_clock}
-                    self.send_message(peer_id, message)
-                    with self.lock:
-                        self.logical_clock += 1
-                    self.update_log(f"SEND to {peer_id}")
-                elif event == 2:
-                    # Send to second peer (if exists, otherwise the only one).
-                    peer_ids = sorted(self.peer_info.keys())
-                    peer_id = peer_ids[1] if len(peer_ids) > 1 else peer_ids[0]
-                    message = {"sender": self.vm_id, "clock": self.logical_clock}
-                    self.send_message(peer_id, message)
-                    with self.lock:
-                        self.logical_clock += 1
-                    self.update_log(f"SEND to {peer_id}")
-                elif event == 3:
-                    # Send to both peers.
-                    for peer_id in self.peer_info.keys():
-                        message = {"sender": self.vm_id, "clock": self.logical_clock}
-                        self.send_message(peer_id, message)
-                    with self.lock:
-                        self.logical_clock += 1
-                    self.update_log("SEND to both")
-                else:
+                # Decide between an internal event or a sending event based on internal_prob.
+                if random.random() < self.internal_prob:
                     # Internal event.
                     with self.lock:
                         self.logical_clock += 1
                     self.update_log("INTERNAL event")
-
+                else:
+                    # Sending event.
+                    peer_ids = sorted(self.peer_info.keys())
+                    if len(peer_ids) == 0:
+                        # No peers to send to.
+                        with self.lock:
+                            self.logical_clock += 1
+                        self.update_log("INTERNAL event (no peers)")
+                    else:
+                        # Choose sending mode based on the number of peers.
+                        if len(peer_ids) == 1:
+                            chosen_peer = peer_ids[0]
+                            message = {"sender": self.vm_id, "clock": self.logical_clock}
+                            self.send_message(chosen_peer, message)
+                            with self.lock:
+                                self.logical_clock += 1
+                            self.update_log(f"SEND to {chosen_peer}")
+                        else:
+                            sending_choice = random.choice(["send1", "send2", "send_both"])
+                            if sending_choice == "send1":
+                                chosen_peer = peer_ids[0]
+                                message = {"sender": self.vm_id, "clock": self.logical_clock}
+                                self.send_message(chosen_peer, message)
+                                with self.lock:
+                                    self.logical_clock += 1
+                                self.update_log(f"SEND to {chosen_peer}")
+                            elif sending_choice == "send2":
+                                chosen_peer = peer_ids[1]
+                                message = {"sender": self.vm_id, "clock": self.logical_clock}
+                                self.send_message(chosen_peer, message)
+                                with self.lock:
+                                    self.logical_clock += 1
+                                self.update_log(f"SEND to {chosen_peer}")
+                            elif sending_choice == "send_both":
+                                for peer in peer_ids:
+                                    message = {"sender": self.vm_id, "clock": self.logical_clock}
+                                    self.send_message(peer, message)
+                                with self.lock:
+                                    self.logical_clock += 1
+                                self.update_log("SEND to both")
             # Wait until the next tick based on the machine's clock rate.
             tick_duration = time.time() - tick_start
             sleep_time = max(0, 1.0 / self.clock_rate - tick_duration)
@@ -189,10 +232,26 @@ class VirtualMachine:
         for s in self.peer_sockets.values():
             s.close()
 
-
 def main():
-    # Configuration for 3 virtual machines:
-    # Each VM is defined by its unique id and the port it will listen on.
+    parser = argparse.ArgumentParser(description="Distributed simulation for logical clocks.")
+    parser.add_argument("--run_time", type=int, required=True, help="Duration of the simulation in seconds.")
+    parser.add_argument("--log_dir", type=str, required=True, help="Directory to store log files.")
+    parser.add_argument("--variation_mode", type=str, default="order",
+                        help="Clock variation mode: 'order' (1-6 ticks/sec) or 'small' (2-3 ticks/sec).")
+    parser.add_argument("--internal_prob", type=float, default=0.7, help="Probability of an internal event (0 to 1).")
+    args = parser.parse_args()
+
+    # Ensure the log directory exists and delete any previous log files.
+    os.makedirs(args.log_dir, exist_ok=True)
+    delete_log_files(args.log_dir)
+
+    # Determine clock rate range based on variation mode.
+    if args.variation_mode == "order":
+        clock_rate_range = (1, 6)
+    else:
+        clock_rate_range = (2, 3)
+
+    # Configuration for three virtual machines.
     config = {
         1: ("localhost", 10001),
         2: ("localhost", 10002),
@@ -204,7 +263,7 @@ def main():
     for vm_id in config.keys():
         # Peers: all other VMs.
         peers = {peer_id: addr for peer_id, addr in config.items() if peer_id != vm_id}
-        vm = VirtualMachine(vm_id, config[vm_id][1], peers)
+        vm = VirtualMachine(vm_id, config[vm_id][1], peers, args.log_dir, clock_rate_range, args.internal_prob)
         vms[vm_id] = vm
 
     # Start each VM in its own thread.
@@ -214,9 +273,9 @@ def main():
         t.start()
         threads.append(t)
 
-    # Let the simulation run for 60 seconds.
+    print(f"Simulation running for {args.run_time} seconds...")
     try:
-        time.sleep(60)
+        time.sleep(args.run_time)
     except KeyboardInterrupt:
         print("Simulation interrupted by user.")
 
@@ -228,7 +287,5 @@ def main():
     for t in threads:
         t.join()
 
-
 if __name__ == "__main__":
-    delete_log_files()
     main()
