@@ -232,6 +232,8 @@ class VirtualMachine:
         for s in self.peer_sockets.values():
             s.close()
 
+import sys
+
 def main():
     parser = argparse.ArgumentParser(description="Distributed simulation for logical clocks.")
     parser.add_argument("--run_time", type=int, required=True, help="Duration of the simulation in seconds.")
@@ -245,11 +247,18 @@ def main():
     os.makedirs(args.log_dir, exist_ok=True)
     delete_log_files(args.log_dir)
 
+    # Redirect stdout and stderr to a log file
+    log_file_path = os.path.join(args.log_dir, "simulation.log")
+    sys.stdout = open(log_file_path, "w")
+    sys.stderr = sys.stdout  # Redirect stderr as well
+
     # Determine clock rate range based on variation mode.
     if args.variation_mode == "order":
         clock_rate_range = (1, 6)
-    else:
+    elif args.variation_mode == "small":
         clock_rate_range = (2, 3)
+    else: 
+        clock_rate_range = (1, 4)  # medium 
 
     # Configuration for three virtual machines.
     config = {
@@ -286,6 +295,9 @@ def main():
     # Wait for all threads to finish.
     for t in threads:
         t.join()
+
+    # Close the log file properly
+    sys.stdout.close()
 
 if __name__ == "__main__":
     main()

@@ -14,8 +14,8 @@ It then produces descriptive bar plots summarizing these findings across conditi
 Experimental Conditions:
   1. Order variation (clock rates vary 1-6), internal event probability = 0.7.
   2. Order variation (clock rates vary 1-6), internal event probability = 0.3.
-  3. Small variation (clock rates vary 2-3), internal event probability = 0.7.
-  4. Small variation (clock rates vary 2-3), internal event probability = 0.3.
+  3. Small variation (clock rates vary 1-2), internal event probability = 0.7.
+  4. Small variation (clock rates vary 1-2), internal event probability = 0.3.
 
 Usage:
     python run_experiments.py
@@ -262,10 +262,24 @@ if __name__ == "__main__":
     # Define experimental conditions.
     # Each condition is a dict with: label, variation_mode, internal_prob.
     experiment_conditions = [
-        {"label": "Order Variation, Internal Prob 0.7", "variation_mode": "order", "internal_prob": 0.7},
-        {"label": "Order Variation, Internal Prob 0.3", "variation_mode": "order", "internal_prob": 0.3},
-        {"label": "Small Variation, Internal Prob 0.7", "variation_mode": "small", "internal_prob": 0.7},
-        {"label": "Small Variation, Internal Prob 0.3", "variation_mode": "small", "internal_prob": 0.3},
+        {"label": "Order Variation Internal Prob 0.1", "variation_mode": "order", "internal_prob": 0.1},
+        {"label": "Order Variation Internal Prob 0.3", "variation_mode": "order", "internal_prob": 0.3},
+        {"label": "Order Variation Internal Prob 0.5", "variation_mode": "order", "internal_prob": 0.5},
+        {"label": "Order Variation Internal Prob 0.7", "variation_mode": "order", "internal_prob": 0.5},
+        {"label": "Order Variation Internal Prob 0.9", "variation_mode": "order", "internal_prob": 0.9},
+        
+        {"label": "Small Variation Internal Prob 0.1", "variation_mode": "small", "internal_prob": 0.1},
+        {"label": "Small Variation Internal Prob 0.3", "variation_mode": "small", "internal_prob": 0.3},
+        {"label": "Small Variation Internal Prob 0.5", "variation_mode": "small", "internal_prob": 0.5},
+        {"label": "Small Variation Internal Prob 0.7", "variation_mode": "small", "internal_prob": 0.7},
+        {"label": "Small Variation Internal Prob 0.9", "variation_mode": "small", "internal_prob": 0.9},
+    
+        {"label": "Medium Variation Internal Prob 0.1", "variation_mode": "small", "internal_prob": 0.1},
+        {"label": "Medium Variation Internal Prob 0.3", "variation_mode": "small", "internal_prob": 0.3},
+        {"label": "Medium Variation Internal Prob 0.5", "variation_mode": "small", "internal_prob": 0.5},
+        {"label": "Medium Variation Internal Prob 0.7", "variation_mode": "small", "internal_prob": 0.7},
+        {"label": "Medium Variation Internal Prob 0.9", "variation_mode": "small", "internal_prob": 0.9},
+    
     ]
     
     # Each trial runs for 60 seconds and we perform 5 trials per condition.
@@ -287,12 +301,3 @@ if __name__ == "__main__":
     # Generate a summary plot comparing all conditions.
     plot_summary(overall_results)
     
-    # Final observations (to be recorded in your lab notebook):
-    print("\nObservations:")
-    print("1. The average jump size in the logical clocks increases when internal events occur less frequently (i.e. lower internal_prob),")
-    print("   since message receives force the clock to update to max(local, received) + 1.")
-    print("2. The drift between VMs (difference between highest and lowest final LC values) is also impacted by the variation in clock rates.")
-    print("   When using the 'order' variation mode, clock rates differ more (1-6 ticks/sec) than in 'small' (2-3 ticks/sec),")
-    print("   typically leading to larger drift.")
-    print("3. Average message queue lengths (as seen in RECEIVE events) vary and can indicate congestion when sending events are more frequent.")
-    print("   Refer to the generated plots for a visual summary of these behaviors.")
