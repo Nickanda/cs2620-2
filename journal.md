@@ -25,7 +25,7 @@ https://github.com/Nickanda/cs2620
       - [Issues Encountered](#issues-encountered-2)
       - [Next Steps](#next-steps-2)
   - [Report on Findings](#report-on-findings)
-      - [Overall Observations](#overall-observations)
+    - [Overall Observations](#overall-observations)
   - [Appendix](#appendix)
 
 ## Development Log
@@ -95,7 +95,6 @@ https://github.com/Nickanda/cs2620
   - Running the simulation with more VMs instead of just three to test scalability. Also consider what experiments might be possible if running across multiple machines.
   - Write a structured report summarizing all findings, including:
 
-
 ---
 
 ### March 5, 2025
@@ -103,28 +102,26 @@ https://github.com/Nickanda/cs2620
 #### Progress
 
 - Ran many more expeirments including visualizations adapting `main.py` and `analysis.py`
-- Decided to run additional experimental configurations to validate findings, including a medium range case (outside of those done above), so the final conditions were probabilities in ```{0.1, 0.3, 0.5, 0.7, 0.9}``` and three variations, since realized that just the four conditions above were not robust enough to draw the conclusions:
-  
+- Decided to run additional experimental configurations to validate findings, including a medium range case (outside of those done above), so the final conditions were probabilities in `{0.1, 0.3, 0.5, 0.7, 0.9}` and three variations, since realized that just the four conditions above were not robust enough to draw the conclusions:
+
   ```{python}
   if args.variation_mode == "order":
         clock_rate_range = (1, 6)
     elif args.variation_mode == "small":
         clock_rate_range = (2, 3)
-    else: 
+    else:
         clock_rate_range = (1, 4)  # medium
   ```
 
 #### Issues Encountered
 
-- Had to deal with running experiments a couple times which took an extremely long time and then had to be rerun which was very annoying. Decided to implement a threading-based approach for things to take less time. 
+- Had to deal with running experiments a couple times which took an extremely long time and then had to be rerun which was very annoying. Decided to implement a threading-based approach for things to take less time.
 - Forgot to save important data so had to re-run data (printed rather than saving), forcusing time-consuming re-runs
 
 #### Next Steps
 
 - Produce final report (see below)
-[Back to Table of Contents](#table-of-contents)
-
-
+  [Back to Table of Contents](#table-of-contents)
 
 [Back to Table of Contents](#table-of-contents)
 
@@ -137,12 +134,14 @@ As described above, we decided to run experiments under four conditions, with th
 #### Overall Observations
 
 1. The average jump size in the logical clocks increases when internal events occur less frequently (i.e. lower internal_prob), since message receives force the clock to update to max(local, received) + 1.
+
    - This effect is most pronounced in the order variation setting, where fast VMs frequently send to slow ones.
 
 2. The drift between VMs (difference between highest and lowest final LC values) is also impacted by the variation in clock rates and less frequent internal events. When using the 'order' variation mode, clock rates differ more (1-6 ticks/sec) than in 'small' (2-3 ticks/sec), typically leading to larger drift.
-     - When VMs have a large speed variation (1-6 ticks/sec), drift can accumulate more significantly (see the following plot from the large speed variation and high internal probability for the possible consequences of a combination of the impact of 1 and 2, with large jumps and drift)
-     - Drift can accumulate and there are large ranges in the raw data
-  ![Logical Clock Progression - Trial 3](Order_Variation_Internal_Prob_0.1/trial_5/Trial_5_logical_clock_progression.png)  
+
+   - When VMs have a large speed variation (1-6 ticks/sec), drift can accumulate more significantly (see the following plot from the large speed variation and high internal probability for the possible consequences of a combination of the impact of 1 and 2, with large jumps and drift)
+   - Drift can accumulate and there are large ranges in the raw data
+     ![Logical Clock Progression - Trial 3](trials/Order_Variation_Internal_Prob_0.1/trial_5/Trial_5_logical_clock_progression.png)
 
 3. We also find that the average message queue lengths (in the RECEIVE events) vary and can indicate congestion when sending events are more frequent.
    - Queue lengths spike when sending probability increases (internal_prob = 0.3).
@@ -150,11 +149,11 @@ As described above, we decided to run experiments under four conditions, with th
    - This confirms that message-heavy conditions can lead to delayed logical clock updates.
 
 Overall, the impacts described above can be seen in the following plot:
-![Plot summary](experiment_summary.png)  
+![Plot summary](experiment_summary.png)
 
 [Back to Table of Contents](#table-of-contents)
 
-## Appendix 
+## Appendix
 
 ========================================
 Running experiment: Order Variation Internal Prob 0.1
@@ -174,18 +173,18 @@ Running simulation: variation_mode=order, internal_prob=0.1 for 60 sec in 'Order
 Plot saved: Order_Variation_Internal_Prob_0.1/trial_5/Trial_5_logical_clock_progression.png
 Trial 5: avg_jump=1.21, drift=206, avg_queue_length=44.09
 Condition [Order Variation Internal Prob 0.1] over 5 trials:
-  Average Jump Size: 1.22
-  Drift among VMs: 95.0
-  Average Queue Length: 16.82
+Average Jump Size: 1.22
+Drift among VMs: 95.0
+Average Queue Length: 16.82
 
 Trial Results:
 Trial | VM1_Rate | VM2_Rate | VM3_Rate | AvgJump | Drift | AvgQueue
 ------|----------|----------|----------|---------|-------|---------
-    1 |         2 |         2 |         4 | 1.30 | 55 | 14.32
-    2 |         4 |         6 |         2 | 1.26 | 161 | 18.61
-    3 |         4 |         4 |         3 | 1.08 | 9 | 1.37
-    4 |         2 |         3 |         4 | 1.24 | 44 | 5.71
-    5 |         2 |         1 |         5 | 1.21 | 206 | 44.09
+1 | 2 | 2 | 4 | 1.30 | 55 | 14.32
+2 | 4 | 6 | 2 | 1.26 | 161 | 18.61
+3 | 4 | 4 | 3 | 1.08 | 9 | 1.37
+4 | 2 | 3 | 4 | 1.24 | 44 | 5.71
+5 | 2 | 1 | 5 | 1.21 | 206 | 44.09
 
 ========================================
 Running experiment: Order Variation Internal Prob 0.3
@@ -205,18 +204,18 @@ Running simulation: variation_mode=order, internal_prob=0.3 for 60 sec in 'Order
 Plot saved: Order_Variation_Internal_Prob_0.3/trial_5/Trial_5_logical_clock_progression.png
 Trial 5: avg_jump=1.38, drift=193, avg_queue_length=30.89
 Condition [Order Variation Internal Prob 0.3] over 5 trials:
-  Average Jump Size: 1.23
-  Drift among VMs: 65.0
-  Average Queue Length: 8.41
+Average Jump Size: 1.23
+Drift among VMs: 65.0
+Average Queue Length: 8.41
 
 Trial Results:
 Trial | VM1_Rate | VM2_Rate | VM3_Rate | AvgJump | Drift | AvgQueue
 ------|----------|----------|----------|---------|-------|---------
-    1 |         1 |         1 |         1 | 1.00 | 0 | 0.27
-    2 |         4 |         6 |         4 | 1.28 | 2 | 0.66
-    3 |         1 |         4 |         3 | 1.23 | 126 | 9.67
-    4 |         3 |         2 |         2 | 1.27 | 4 | 0.54
-    5 |         1 |         6 |         2 | 1.38 | 193 | 30.89
+1 | 1 | 1 | 1 | 1.00 | 0 | 0.27
+2 | 4 | 6 | 4 | 1.28 | 2 | 0.66
+3 | 1 | 4 | 3 | 1.23 | 126 | 9.67
+4 | 3 | 2 | 2 | 1.27 | 4 | 0.54
+5 | 1 | 6 | 2 | 1.38 | 193 | 30.89
 
 ========================================
 Running experiment: Order Variation Internal Prob 0.5
@@ -236,18 +235,18 @@ Running simulation: variation_mode=order, internal_prob=0.5 for 60 sec in 'Order
 Plot saved: Order_Variation_Internal_Prob_0.5/trial_5/Trial_5_logical_clock_progression.png
 Trial 5: avg_jump=1.36, drift=0, avg_queue_length=0.27
 Condition [Order Variation Internal Prob 0.5] over 5 trials:
-  Average Jump Size: 1.43
-  Drift among VMs: 36.8
-  Average Queue Length: 2.71
+Average Jump Size: 1.43
+Drift among VMs: 36.8
+Average Queue Length: 2.71
 
 Trial Results:
 Trial | VM1_Rate | VM2_Rate | VM3_Rate | AvgJump | Drift | AvgQueue
 ------|----------|----------|----------|---------|-------|---------
-    1 |         3 |         6 |         5 | 1.27 | 9 | 0.58
-    2 |         4 |         5 |         2 | 1.31 | 32 | 3.02
-    3 |         2 |         2 |         5 | 1.63 | 11 | 1.61
-    4 |         5 |         1 |         2 | 1.57 | 132 | 8.07
-    5 |         5 |         3 |         3 | 1.36 | 0 | 0.27
+1 | 3 | 6 | 5 | 1.27 | 9 | 0.58
+2 | 4 | 5 | 2 | 1.31 | 32 | 3.02
+3 | 2 | 2 | 5 | 1.63 | 11 | 1.61
+4 | 5 | 1 | 2 | 1.57 | 132 | 8.07
+5 | 5 | 3 | 3 | 1.36 | 0 | 0.27
 
 ========================================
 Running experiment: Order Variation Internal Prob 0.7
@@ -267,18 +266,18 @@ Running simulation: variation_mode=order, internal_prob=0.7 for 60 sec in 'Order
 Plot saved: Order_Variation_Internal_Prob_0.7/trial_5/Trial_5_logical_clock_progression.png
 Trial 5: avg_jump=1.19, drift=1, avg_queue_length=0.19
 Condition [Order Variation Internal Prob 0.7] over 5 trials:
-  Average Jump Size: 1.39
-  Drift among VMs: 40.0
-  Average Queue Length: 2.31
+Average Jump Size: 1.39
+Drift among VMs: 40.0
+Average Queue Length: 2.31
 
 Trial Results:
 Trial | VM1_Rate | VM2_Rate | VM3_Rate | AvgJump | Drift | AvgQueue
 ------|----------|----------|----------|---------|-------|---------
-    1 |         5 |         6 |         1 | 1.32 | 123 | 5.74
-    2 |         3 |         1 |         3 | 1.23 | 27 | 2.43
-    3 |         1 |         1 |         4 | 1.94 | 10 | 0.61
-    4 |         4 |         4 |         1 | 1.27 | 39 | 2.58
-    5 |         3 |         6 |         6 | 1.19 | 1 | 0.19
+1 | 5 | 6 | 1 | 1.32 | 123 | 5.74
+2 | 3 | 1 | 3 | 1.23 | 27 | 2.43
+3 | 1 | 1 | 4 | 1.94 | 10 | 0.61
+4 | 4 | 4 | 1 | 1.27 | 39 | 2.58
+5 | 3 | 6 | 6 | 1.19 | 1 | 0.19
 
 ========================================
 Running experiment: Order Variation Internal Prob 0.9
@@ -298,18 +297,18 @@ Running simulation: variation_mode=order, internal_prob=0.9 for 60 sec in 'Order
 Plot saved: Order_Variation_Internal_Prob_0.9/trial_5/Trial_5_logical_clock_progression.png
 Trial 5: avg_jump=1.46, drift=15, avg_queue_length=0.04
 Condition [Order Variation Internal Prob 0.9] over 5 trials:
-  Average Jump Size: 1.44
-  Drift among VMs: 9.6
-  Average Queue Length: 0.15
+Average Jump Size: 1.44
+Drift among VMs: 9.6
+Average Queue Length: 0.15
 
 Trial Results:
 Trial | VM1_Rate | VM2_Rate | VM3_Rate | AvgJump | Drift | AvgQueue
 ------|----------|----------|----------|---------|-------|---------
-    1 |         4 |         1 |         5 | 1.45 | 16 | 0.46
-    2 |         4 |         3 |         6 | 1.36 | 4 | 0.03
-    3 |         3 |         6 |         3 | 1.47 | 6 | 0.11
-    4 |         5 |         3 |         2 | 1.47 | 7 | 0.08
-    5 |         1 |         4 |         5 | 1.46 | 15 | 0.04
+1 | 4 | 1 | 5 | 1.45 | 16 | 0.46
+2 | 4 | 3 | 6 | 1.36 | 4 | 0.03
+3 | 3 | 6 | 3 | 1.47 | 6 | 0.11
+4 | 5 | 3 | 2 | 1.47 | 7 | 0.08
+5 | 1 | 4 | 5 | 1.46 | 15 | 0.04
 
 ========================================
 Running experiment: Small Variation Internal Prob 0.1
@@ -329,18 +328,18 @@ Running simulation: variation_mode=small, internal_prob=0.1 for 60 sec in 'Small
 Plot saved: Small_Variation_Internal_Prob_0.1/trial_5/Trial_5_logical_clock_progression.png
 Trial 5: avg_jump=1.27, drift=4, avg_queue_length=1.18
 Condition [Small Variation Internal Prob 0.1] over 5 trials:
-  Average Jump Size: 1.12
-  Drift among VMs: 6.2
-  Average Queue Length: 1.50
+Average Jump Size: 1.12
+Drift among VMs: 6.2
+Average Queue Length: 1.50
 
 Trial Results:
 Trial | VM1_Rate | VM2_Rate | VM3_Rate | AvgJump | Drift | AvgQueue
 ------|----------|----------|----------|---------|-------|---------
-    1 |         2 |         2 |         2 | 1.00 | 0 | 0.39
-    2 |         3 |         2 |         3 | 1.10 | 12 | 1.99
-    3 |         2 |         3 |         3 | 1.09 | 14 | 2.56
-    4 |         3 |         3 |         2 | 1.12 | 1 | 1.38
-    5 |         3 |         2 |         2 | 1.27 | 4 | 1.18
+1 | 2 | 2 | 2 | 1.00 | 0 | 0.39
+2 | 3 | 2 | 3 | 1.10 | 12 | 1.99
+3 | 2 | 3 | 3 | 1.09 | 14 | 2.56
+4 | 3 | 3 | 2 | 1.12 | 1 | 1.38
+5 | 3 | 2 | 2 | 1.27 | 4 | 1.18
 
 ========================================
 Running experiment: Small Variation Internal Prob 0.3
@@ -360,18 +359,18 @@ Running simulation: variation_mode=small, internal_prob=0.3 for 60 sec in 'Small
 Plot saved: Small_Variation_Internal_Prob_0.3/trial_5/Trial_5_logical_clock_progression.png
 Trial 5: avg_jump=1.00, drift=0, avg_queue_length=0.25
 Condition [Small Variation Internal Prob 0.3] over 5 trials:
-  Average Jump Size: 1.04
-  Drift among VMs: 2.6
-  Average Queue Length: 0.81
+Average Jump Size: 1.04
+Drift among VMs: 2.6
+Average Queue Length: 0.81
 
 Trial Results:
 Trial | VM1_Rate | VM2_Rate | VM3_Rate | AvgJump | Drift | AvgQueue
 ------|----------|----------|----------|---------|-------|---------
-    1 |         2 |         2 |         2 | 1.00 | 0 | 0.28
-    2 |         3 |         3 |         2 | 1.10 | 11 | 3.01
-    3 |         2 |         3 |         3 | 1.12 | 2 | 0.34
-    4 |         3 |         3 |         3 | 1.00 | 0 | 0.17
-    5 |         3 |         3 |         3 | 1.00 | 0 | 0.25
+1 | 2 | 2 | 2 | 1.00 | 0 | 0.28
+2 | 3 | 3 | 2 | 1.10 | 11 | 3.01
+3 | 2 | 3 | 3 | 1.12 | 2 | 0.34
+4 | 3 | 3 | 3 | 1.00 | 0 | 0.17
+5 | 3 | 3 | 3 | 1.00 | 0 | 0.25
 
 ========================================
 Running experiment: Small Variation Internal Prob 0.5
@@ -391,18 +390,18 @@ Running simulation: variation_mode=small, internal_prob=0.5 for 60 sec in 'Small
 Plot saved: Small_Variation_Internal_Prob_0.5/trial_5/Trial_5_logical_clock_progression.png
 Trial 5: avg_jump=1.27, drift=2, avg_queue_length=0.30
 Condition [Small Variation Internal Prob 0.5] over 5 trials:
-  Average Jump Size: 1.16
-  Drift among VMs: 2.0
-  Average Queue Length: 0.26
+Average Jump Size: 1.16
+Drift among VMs: 2.0
+Average Queue Length: 0.26
 
 Trial Results:
 Trial | VM1_Rate | VM2_Rate | VM3_Rate | AvgJump | Drift | AvgQueue
 ------|----------|----------|----------|---------|-------|---------
-    1 |         3 |         2 |         2 | 1.26 | 5 | 0.25
-    2 |         2 |         3 |         3 | 1.13 | 1 | 0.25
-    3 |         3 |         3 |         3 | 1.00 | 1 | 0.13
-    4 |         3 |         3 |         2 | 1.12 | 1 | 0.38
-    5 |         3 |         2 |         2 | 1.27 | 2 | 0.30
+1 | 3 | 2 | 2 | 1.26 | 5 | 0.25
+2 | 2 | 3 | 3 | 1.13 | 1 | 0.25
+3 | 3 | 3 | 3 | 1.00 | 1 | 0.13
+4 | 3 | 3 | 2 | 1.12 | 1 | 0.38
+5 | 3 | 2 | 2 | 1.27 | 2 | 0.30
 
 ========================================
 Running experiment: Small Variation Internal Prob 0.7
@@ -422,18 +421,18 @@ Running simulation: variation_mode=small, internal_prob=0.7 for 60 sec in 'Small
 Plot saved: Small_Variation_Internal_Prob_0.7/trial_5/Trial_5_logical_clock_progression.png
 Trial 5: avg_jump=1.27, drift=3, avg_queue_length=0.18
 Condition [Small Variation Internal Prob 0.7] over 5 trials:
-  Average Jump Size: 1.16
-  Drift among VMs: 1.8
-  Average Queue Length: 0.10
+Average Jump Size: 1.16
+Drift among VMs: 1.8
+Average Queue Length: 0.10
 
 Trial Results:
 Trial | VM1_Rate | VM2_Rate | VM3_Rate | AvgJump | Drift | AvgQueue
 ------|----------|----------|----------|---------|-------|---------
-    1 |         2 |         2 |         2 | 1.00 | 0 | 0.08
-    2 |         2 |         3 |         2 | 1.27 | 2 | 0.11
-    3 |         3 |         3 |         3 | 1.00 | 0 | 0.06
-    4 |         2 |         2 |         3 | 1.26 | 4 | 0.05
-    5 |         3 |         2 |         2 | 1.27 | 3 | 0.18
+1 | 2 | 2 | 2 | 1.00 | 0 | 0.08
+2 | 2 | 3 | 2 | 1.27 | 2 | 0.11
+3 | 3 | 3 | 3 | 1.00 | 0 | 0.06
+4 | 2 | 2 | 3 | 1.26 | 4 | 0.05
+5 | 3 | 2 | 2 | 1.27 | 3 | 0.18
 
 ========================================
 Running experiment: Small Variation Internal Prob 0.9
@@ -453,18 +452,18 @@ Running simulation: variation_mode=small, internal_prob=0.9 for 60 sec in 'Small
 Plot saved: Small_Variation_Internal_Prob_0.9/trial_5/Trial_5_logical_clock_progression.png
 Trial 5: avg_jump=1.27, drift=3, avg_queue_length=0.02
 Condition [Small Variation Internal Prob 0.9] over 5 trials:
-  Average Jump Size: 1.18
-  Drift among VMs: 4.2
-  Average Queue Length: 0.01
+Average Jump Size: 1.18
+Drift among VMs: 4.2
+Average Queue Length: 0.01
 
 Trial Results:
 Trial | VM1_Rate | VM2_Rate | VM3_Rate | AvgJump | Drift | AvgQueue
 ------|----------|----------|----------|---------|-------|---------
-    1 |         2 |         3 |         2 | 1.24 | 13 | 0.00
-    2 |         3 |         2 |         2 | 1.27 | 2 | 0.03
-    3 |         2 |         2 |         2 | 1.00 | 1 | 0.00
-    4 |         2 |         3 |         3 | 1.12 | 2 | 0.02
-    5 |         2 |         3 |         2 | 1.27 | 3 | 0.02
+1 | 2 | 3 | 2 | 1.24 | 13 | 0.00
+2 | 3 | 2 | 2 | 1.27 | 2 | 0.03
+3 | 2 | 2 | 2 | 1.00 | 1 | 0.00
+4 | 2 | 3 | 3 | 1.12 | 2 | 0.02
+5 | 2 | 3 | 2 | 1.27 | 3 | 0.02
 
 ========================================
 Running experiment: Medium Variation Internal Prob 0.1
@@ -484,18 +483,18 @@ Running simulation: variation_mode=medium, internal_prob=0.1 for 60 sec in 'Medi
 Plot saved: Medium_Variation_Internal_Prob_0.1/trial_5/Trial_5_logical_clock_progression.png
 Trial 5: avg_jump=1.29, drift=136, avg_queue_length=23.24
 Condition [Medium Variation Internal Prob 0.1] over 5 trials:
-  Average Jump Size: 1.21
-  Drift among VMs: 81.4
-  Average Queue Length: 13.05
+Average Jump Size: 1.21
+Drift among VMs: 81.4
+Average Queue Length: 13.05
 
 Trial Results:
 Trial | VM1_Rate | VM2_Rate | VM3_Rate | AvgJump | Drift | AvgQueue
 ------|----------|----------|----------|---------|-------|---------
-    1 |         4 |         4 |         4 | 1.00 | 0 | 0.45
-    2 |         4 |         2 |         3 | 1.21 | 63 | 9.93
-    3 |         1 |         4 |         2 | 1.31 | 118 | 21.03
-    4 |         3 |         2 |         1 | 1.24 | 90 | 10.62
-    5 |         2 |         4 |         1 | 1.29 | 136 | 23.24
+1 | 4 | 4 | 4 | 1.00 | 0 | 0.45
+2 | 4 | 2 | 3 | 1.21 | 63 | 9.93
+3 | 1 | 4 | 2 | 1.31 | 118 | 21.03
+4 | 3 | 2 | 1 | 1.24 | 90 | 10.62
+5 | 2 | 4 | 1 | 1.29 | 136 | 23.24
 
 ========================================
 Running experiment: Medium Variation Internal Prob 0.3
@@ -515,18 +514,18 @@ Running simulation: variation_mode=medium, internal_prob=0.3 for 60 sec in 'Medi
 Plot saved: Medium_Variation_Internal_Prob_0.3/trial_5/Trial_5_logical_clock_progression.png
 Trial 5: avg_jump=1.37, drift=119, avg_queue_length=15.14
 Condition [Medium Variation Internal Prob 0.3] over 5 trials:
-  Average Jump Size: 1.17
-  Drift among VMs: 56.6
-  Average Queue Length: 6.41
+Average Jump Size: 1.17
+Drift among VMs: 56.6
+Average Queue Length: 6.41
 
 Trial Results:
 Trial | VM1_Rate | VM2_Rate | VM3_Rate | AvgJump | Drift | AvgQueue
 ------|----------|----------|----------|---------|-------|---------
-    1 |         2 |         2 |         2 | 1.00 | 0 | 0.20
-    2 |         4 |         1 |         3 | 1.20 | 137 | 11.83
-    3 |         2 |         3 |         4 | 1.27 | 27 | 4.69
-    4 |         2 |         2 |         2 | 1.01 | 0 | 0.20
-    5 |         1 |         2 |         4 | 1.37 | 119 | 15.14
+1 | 2 | 2 | 2 | 1.00 | 0 | 0.20
+2 | 4 | 1 | 3 | 1.20 | 137 | 11.83
+3 | 2 | 3 | 4 | 1.27 | 27 | 4.69
+4 | 2 | 2 | 2 | 1.01 | 0 | 0.20
+5 | 1 | 2 | 4 | 1.37 | 119 | 15.14
 
 ========================================
 Running experiment: Medium Variation Internal Prob 0.5
@@ -546,18 +545,18 @@ Running simulation: variation_mode=medium, internal_prob=0.5 for 60 sec in 'Medi
 Plot saved: Medium_Variation_Internal_Prob_0.5/trial_5/Trial_5_logical_clock_progression.png
 Trial 5: avg_jump=1.09, drift=2, avg_queue_length=0.21
 Condition [Medium Variation Internal Prob 0.5] over 5 trials:
-  Average Jump Size: 1.23
-  Drift among VMs: 43.0
-  Average Queue Length: 4.18
+Average Jump Size: 1.23
+Drift among VMs: 43.0
+Average Queue Length: 4.18
 
 Trial Results:
 Trial | VM1_Rate | VM2_Rate | VM3_Rate | AvgJump | Drift | AvgQueue
 ------|----------|----------|----------|---------|-------|---------
-    1 |         2 |         1 |         3 | 1.30 | 68 | 7.30
-    2 |         4 |         2 |         2 | 1.48 | 5 | 0.42
-    3 |         4 |         4 |         1 | 1.07 | 139 | 12.86
-    4 |         3 |         3 |         4 | 1.19 | 1 | 0.12
-    5 |         4 |         3 |         4 | 1.09 | 2 | 0.21
+1 | 2 | 1 | 3 | 1.30 | 68 | 7.30
+2 | 4 | 2 | 2 | 1.48 | 5 | 0.42
+3 | 4 | 4 | 1 | 1.07 | 139 | 12.86
+4 | 3 | 3 | 4 | 1.19 | 1 | 0.12
+5 | 4 | 3 | 4 | 1.09 | 2 | 0.21
 
 ========================================
 Running experiment: Medium Variation Internal Prob 0.7
@@ -577,18 +576,18 @@ Running simulation: variation_mode=medium, internal_prob=0.7 for 60 sec in 'Medi
 Plot saved: Medium_Variation_Internal_Prob_0.7/trial_5/Trial_5_logical_clock_progression.png
 Trial 5: avg_jump=1.47, drift=11, avg_queue_length=0.16
 Condition [Medium Variation Internal Prob 0.7] over 5 trials:
-  Average Jump Size: 1.49
-  Drift among VMs: 14.6
-  Average Queue Length: 1.17
+Average Jump Size: 1.49
+Drift among VMs: 14.6
+Average Queue Length: 1.17
 
 Trial Results:
 Trial | VM1_Rate | VM2_Rate | VM3_Rate | AvgJump | Drift | AvgQueue
 ------|----------|----------|----------|---------|-------|---------
-    1 |         4 |         3 |         1 | 1.45 | 22 | 3.25
-    2 |         3 |         2 |         1 | 1.46 | 10 | 0.51
-    3 |         4 |         4 |         2 | 1.20 | 3 | 0.34
-    4 |         1 |         4 |         1 | 1.89 | 27 | 1.61
-    5 |         2 |         2 |         4 | 1.47 | 11 | 0.16
+1 | 4 | 3 | 1 | 1.45 | 22 | 3.25
+2 | 3 | 2 | 1 | 1.46 | 10 | 0.51
+3 | 4 | 4 | 2 | 1.20 | 3 | 0.34
+4 | 1 | 4 | 1 | 1.89 | 27 | 1.61
+5 | 2 | 2 | 4 | 1.47 | 11 | 0.16
 
 ========================================
 Running experiment: Medium Variation Internal Prob 0.9
@@ -608,16 +607,16 @@ Running simulation: variation_mode=medium, internal_prob=0.9 for 60 sec in 'Medi
 Plot saved: Medium_Variation_Internal_Prob_0.9/trial_5/Trial_5_logical_clock_progression.png
 Trial 5: avg_jump=1.00, drift=0, avg_queue_length=0.05
 Condition [Medium Variation Internal Prob 0.9] over 5 trials:
-  Average Jump Size: 1.12
-  Drift among VMs: 2.6
-  Average Queue Length: 0.03
+Average Jump Size: 1.12
+Drift among VMs: 2.6
+Average Queue Length: 0.03
 
 Trial Results:
 
-Trial | VM1_Rate | VM2_Rate | VM3_Rate | AvgJump | Drift | AvgQueue
-------|----------|----------|----------|---------|-------|---------
-    1 |         1 |         1 |         1 | 1.00 | 0 | 0.00
-    2 |         2 |         3 |         4 | 1.30 | 9 | 0.07
-    3 |         2 |         4 |         3 | 1.32 | 3 | 0.03
-    4 |         4 |         4 |         4 | 1.00 | 1 | 0.02
-    5 |         1 |         1 |         1 | 1.00 | 0 | 0.05
+| Trial | VM1_Rate | VM2_Rate | VM3_Rate | AvgJump | Drift | AvgQueue |
+| ----- | -------- | -------- | -------- | ------- | ----- | -------- |
+| 1     | 1        | 1        | 1        | 1.00    | 0     | 0.00     |
+| 2     | 2        | 3        | 4        | 1.30    | 9     | 0.07     |
+| 3     | 2        | 4        | 3        | 1.32    | 3     | 0.03     |
+| 4     | 4        | 4        | 4        | 1.00    | 1     | 0.02     |
+| 5     | 1        | 1        | 1        | 1.00    | 0     | 0.05     |
