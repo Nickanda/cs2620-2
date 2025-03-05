@@ -2,7 +2,7 @@
 
 ## Link to Project
 
-https://github.com/Nickanda/cs2620
+https://github.com/Nickanda/cs2620-2
 
 ## Table of Contents
 
