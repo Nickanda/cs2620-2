@@ -2,10 +2,10 @@
 """
 main.py
 
-This script runs a distributed system simulation using three virtual machines.
-Each VM maintains a Lamport-style logical clock and communicates with its peers.
-The simulation parameters (run time, log directory, variation mode, and internal
-event probability) are provided as command-line arguments.
+This script runs a distributed system simulation using three separate processes,
+each emulating a virtual machine (VM). Each VM maintains a Lamport-style logical clock
+and communicates with its peers over TCP. The simulation parameters (run time, log directory,
+variation mode, and internal event probability) are provided as command-line arguments.
 
 Simulation Details:
  - Each VM's clock rate is determined by the variation_mode:
@@ -34,6 +34,7 @@ import os
 import glob
 import argparse
 import sys
+from multiprocessing import Process
 
 def delete_log_files(log_dir):
     """Deletes all log files in the specified log directory matching vm_*.log."""
@@ -235,6 +236,17 @@ class VirtualMachine:
         for s in self.peer_sockets.values():
             s.close()
 
+def run_vm(vm_id, port, peer_info, log_dir, clock_rate_range, internal_prob):
+    """
+    Function to create and run a VirtualMachine instance.
+    This will be the target for each process.
+    """
+    vm = VirtualMachine(vm_id, port, peer_info, log_dir, clock_rate_range, internal_prob)
+    try:
+        vm.run()
+    except KeyboardInterrupt:
+        vm.stop()
+
 def main():
     parser = argparse.ArgumentParser(description="Distributed simulation for logical clocks.")
     parser.add_argument("--run_time", type=int, required=True, help="Duration of the simulation in seconds.")
@@ -242,7 +254,17 @@ def main():
     parser.add_argument("--variation_mode", type=str, default="order",
                         help="Clock variation mode: 'order' (1-6 ticks/sec) or 'small' (2-3 ticks/sec).")
     parser.add_argument("--internal_prob", type=float, default=0.7, help="Probability of an internal event (0 to 1).")
+    parser.add_argument("--port_offset", type=int, default=0,
+                        help="Port offset to avoid conflicts when running parallel simulations.")
     args = parser.parse_args()
+
+    # Use the port offset to shift the fixed port numbers.
+    port_offset = args.port_offset
+    config = {
+        1: ("localhost", 10001 + port_offset),
+        2: ("localhost", 10002 + port_offset),
+        3: ("localhost", 10003 + port_offset),
+    }
 
     # Create the log directory if it does not exist.
     if not os.path.exists(args.log_dir):
@@ -250,11 +272,6 @@ def main():
     else:
         # Optionally delete previous log files.
         delete_log_files(args.log_dir)
-
-    # Redirect stdout and stderr to a log file.
-    log_file_path = os.path.join(args.log_dir, "simulation.log")
-    sys.stdout = open(log_file_path, "w")
-    sys.stderr = sys.stdout  # Redirect stderr as well
 
     # Determine clock rate range based on variation mode.
     if args.variation_mode == "order":
@@ -264,27 +281,17 @@ def main():
     else: 
         clock_rate_range = (1, 4)  # medium 
 
-    # Configuration for three virtual machines.
-    config = {
-        1: ("localhost", 10001),
-        2: ("localhost", 10002),
-        3: ("localhost", 10003),
-    }
-
-    # Create VirtualMachine instances.
-    vms = {}
-    for vm_id in config.keys():
+    # Create and start a process for each virtual machine.
+    processes = []
+    for vm_id, (host, port) in config.items():
         # Peers: all other VMs.
         peers = {peer_id: addr for peer_id, addr in config.items() if peer_id != vm_id}
-        vm = VirtualMachine(vm_id, config[vm_id][1], peers, args.log_dir, clock_rate_range, args.internal_prob)
-        vms[vm_id] = vm
-
-    # Start each VM in its own thread.
-    threads = []
-    for vm in vms.values():
-        t = threading.Thread(target=vm.run, daemon=True)
-        t.start()
-        threads.append(t)
+        p = Process(
+            target=run_vm,
+            args=(vm_id, port, peers, args.log_dir, clock_rate_range, args.internal_prob)
+        )
+        p.start()
+        processes.append(p)
 
     print(f"Simulation running for {args.run_time} seconds...")
     try:
@@ -292,16 +299,11 @@ def main():
     except KeyboardInterrupt:
         print("Simulation interrupted by user.")
 
-    # Stop all virtual machines.
-    for vm in vms.values():
-        vm.stop()
-
-    # Wait for all threads to finish.
-    for t in threads:
-        t.join()
-
-    # Close the log file properly.
-    sys.stdout.close()
+    print("Stopping simulation processes...")
+    for p in processes:
+        p.terminate()  # Force termination of the VM process.
+    for p in processes:
+        p.join()
 
 if __name__ == "__main__":
     main()
