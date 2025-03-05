@@ -17,7 +17,7 @@ Simulation Details:
    chooses to send to one or both peers.
  - All events are logged in files with the format:
      <system time> | <event type> | LC: <logical_clock> | <details>
-   which is compatible with run_trials_and_analyze.py.
+   which is compatible with run_experiments.py.
  - Prior to running, any previous log files in the log directory are deleted.
  
 Usage Example:
@@ -33,6 +33,7 @@ import queue
 import os
 import glob
 import argparse
+import sys
 
 def delete_log_files(log_dir):
     """Deletes all log files in the specified log directory matching vm_*.log."""
@@ -66,6 +67,8 @@ class VirtualMachine:
         # Open a log file for writing events.
         self.log_file_path = os.path.join(log_dir, f"vm_{vm_id}.log")
         self.log_file = open(self.log_file_path, "a")
+        # Log the initial clock rate so that analysis can pick it up.
+        self.update_log("INIT", f"ClockRate: {self.clock_rate}")
 
         # Dictionary to hold client sockets for sending messages to peers.
         self.peer_sockets = {}
@@ -232,8 +235,6 @@ class VirtualMachine:
         for s in self.peer_sockets.values():
             s.close()
 
-import sys
-
 def main():
     parser = argparse.ArgumentParser(description="Distributed simulation for logical clocks.")
     parser.add_argument("--run_time", type=int, required=True, help="Duration of the simulation in seconds.")
@@ -243,11 +244,14 @@ def main():
     parser.add_argument("--internal_prob", type=float, default=0.7, help="Probability of an internal event (0 to 1).")
     args = parser.parse_args()
 
-    # Ensure the log directory exists and delete any previous log files.
-    os.makedirs(args.log_dir, exist_ok=True)
-    delete_log_files(args.log_dir)
+    # Create the log directory if it does not exist.
+    if not os.path.exists(args.log_dir):
+        os.makedirs(args.log_dir)
+    else:
+        # Optionally delete previous log files.
+        delete_log_files(args.log_dir)
 
-    # Redirect stdout and stderr to a log file
+    # Redirect stdout and stderr to a log file.
     log_file_path = os.path.join(args.log_dir, "simulation.log")
     sys.stdout = open(log_file_path, "w")
     sys.stderr = sys.stdout  # Redirect stderr as well
@@ -296,7 +300,7 @@ def main():
     for t in threads:
         t.join()
 
-    # Close the log file properly
+    # Close the log file properly.
     sys.stdout.close()
 
 if __name__ == "__main__":

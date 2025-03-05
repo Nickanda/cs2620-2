@@ -8,14 +8,10 @@ with different parameters. For each experimental condition, it runs the simulati
   - Average jump size in the logical clock values.
   - Drift among VMs (difference between highest and lowest final logical clock).
   - Average message queue length (observed from RECEIVE events).
+  - Clock rate used by each VM (parsed from "ClockRate: <num>" in vm_N.log).
 
-It then produces descriptive bar plots summarizing these findings across conditions.
-
-Experimental Conditions:
-  1. Order variation (clock rates vary 1-6), internal event probability = 0.7.
-  2. Order variation (clock rates vary 1-6), internal event probability = 0.3.
-  3. Small variation (clock rates vary 1-2), internal event probability = 0.7.
-  4. Small variation (clock rates vary 1-2), internal event probability = 0.3.
+It then produces a summary bar plot for the aggregated metrics and prints a table
+showing the average metrics plus each VM's clock rate for each trial.
 
 Usage:
     python run_experiments.py
@@ -24,9 +20,11 @@ Usage:
 import subprocess
 import time
 import os
-import glob
 import shutil
 import re
+
+import matplotlib
+matplotlib.use("Agg")  # Non-interactive backend
 import matplotlib.pyplot as plt
 
 # ----------------------------
@@ -36,7 +34,7 @@ import matplotlib.pyplot as plt
 def run_simulation(run_time, log_dir, variation_mode, internal_prob):
     """
     Runs the simulation (main.py) with the provided parameters.
-    Assumes main.py is in the same directory.
+    Assumes main.py is in the same directory and that it logs "ClockRate: <num>".
     """
     command = [
         "python", "main.py",
@@ -45,7 +43,8 @@ def run_simulation(run_time, log_dir, variation_mode, internal_prob):
         "--variation_mode", variation_mode,
         "--internal_prob", str(internal_prob)
     ]
-    print(f"Running simulation: variation_mode={variation_mode}, internal_prob={internal_prob} for {run_time} sec in '{log_dir}'")
+    print(f"Running simulation: variation_mode={variation_mode}, "
+          f"internal_prob={internal_prob} for {run_time} sec in '{log_dir}'")
     subprocess.run(command)
     # Pause briefly to ensure logs are flushed.
     time.sleep(2)
@@ -55,37 +54,56 @@ def parse_logs(log_dir):
     Parses the log files from the given directory.
     Each log line is expected to be in the format:
        <system time> | <event type> | LC: <logical_clock> | <details>
-    
-    Returns a dictionary mapping VM id (1,2,3) to a list of events.
-    Each event is a dict with keys: 'ts', 'event', 'lc', 'queue_len' (if available, else None).
+
+    Additionally, if the line contains "ClockRate: <num>", we capture that as well.
+
+    Returns:
+      vm_logs: dict of {vm_id -> list of event dicts}
+      vm_clock_rates: dict of {vm_id -> clock_rate_int or None}
     """
     vm_logs = {}
+    vm_clock_rates = {}
     for vm in [1, 2, 3]:
         file_path = os.path.join(log_dir, f"vm_{vm}.log")
         events = []
+        clock_rate = None
         if os.path.exists(file_path):
             with open(file_path, 'r') as f:
                 for line in f:
                     parts = line.strip().split('|')
                     if len(parts) >= 3:
                         try:
+                            # Parse system time and event type
                             ts = float(parts[0].strip())
                             event_type = parts[1].strip()
-                            # Expect LC: <value>
+
+                            # Parse logical clock from "LC: <value>"
                             lc_part = parts[2].strip()
                             lc = int(lc_part.split()[1])
+
+                            # Check for "ClockRate:" in details
+                            details = parts[3].strip() if len(parts) >= 4 else ""
+                            match_rate = re.search(r"ClockRate:\s*(\d+)", details)
+                            if match_rate:
+                                clock_rate = int(match_rate.group(1))
+
+                            # Check for "QueueLen:" in details
                             queue_len = None
-                            if len(parts) >= 4:
-                                details = parts[3].strip()
-                                # Look for 'QueueLen: <num>' in details.
-                                match = re.search(r"QueueLen:\s*(\d+)", details)
-                                if match:
-                                    queue_len = int(match.group(1))
-                            events.append({"ts": ts, "event": event_type, "lc": lc, "queue_len": queue_len})
+                            match_queue = re.search(r"QueueLen:\s*(\d+)", details)
+                            if match_queue:
+                                queue_len = int(match_queue.group(1))
+
+                            events.append({
+                                "ts": ts,
+                                "event": event_type,
+                                "lc": lc,
+                                "queue_len": queue_len
+                            })
                         except Exception as e:
                             print(f"Error parsing line: {line} => {e}")
         vm_logs[vm] = events
-    return vm_logs
+        vm_clock_rates[vm] = clock_rate
+    return vm_logs, vm_clock_rates
 
 def analyze_vm_log(events):
     """
@@ -140,8 +158,16 @@ def plot_log_progression(vm_logs, log_dir, trial_label):
 def run_trial(trial_num, run_time, variation_mode, internal_prob, base_log_dir):
     """
     Runs a single simulation trial with the specified parameters.
-    Returns a tuple with:
-       (avg_jump, drift, avg_queue_length)
+    Returns a dictionary of:
+       {
+         "trial": trial_num,
+         "avg_jump": float,
+         "drift": int,
+         "avg_queue_length": float,
+         "vm_1_rate": int or None,
+         "vm_2_rate": int or None,
+         "vm_3_rate": int or None
+       }
     """
     log_dir = os.path.join(base_log_dir, f"trial_{trial_num}")
     # Remove previous log directory if it exists.
@@ -149,13 +175,17 @@ def run_trial(trial_num, run_time, variation_mode, internal_prob, base_log_dir):
         shutil.rmtree(log_dir)
     os.makedirs(log_dir, exist_ok=True)
     
+    # Run the simulation
     run_simulation(run_time, log_dir, variation_mode, internal_prob)
-    vm_logs = parse_logs(log_dir)
+
+    # Parse logs
+    vm_logs, vm_clock_rates = parse_logs(log_dir)
     
-    # For each VM, compute jump sizes.
+    # Compute jumps, drift, queue lengths
     all_jumps = []
     final_lcs = {}
     all_queue_lengths = []
+
     for vm, events in vm_logs.items():
         jumps = analyze_vm_log(events)
         all_jumps.extend(jumps)
@@ -163,24 +193,35 @@ def run_trial(trial_num, run_time, variation_mode, internal_prob, base_log_dir):
             final_lcs[vm] = events[-1]["lc"]
         else:
             final_lcs[vm] = 0
+
         q_lengths = analyze_queue_lengths(events)
         all_queue_lengths.extend(q_lengths)
-    
-    # Drift: difference between max and min final LC across VMs.
-    drift = max(final_lcs.values()) - min(final_lcs.values())
-    avg_jump = sum(all_jumps)/len(all_jumps) if all_jumps else 0
-    avg_queue_length = sum(all_queue_lengths)/len(all_queue_lengths) if all_queue_lengths else 0
 
+    drift = max(final_lcs.values()) - min(final_lcs.values()) if final_lcs else 0
+    avg_jump = sum(all_jumps)/len(all_jumps) if all_jumps else 0.0
+    avg_queue_length = sum(all_queue_lengths)/len(all_queue_lengths) if all_queue_lengths else 0.0
+
+    # Plot
     trial_label = f"Trial_{trial_num}"
     plot_log_progression(vm_logs, log_dir, trial_label)
     
-    print(f"Trial {trial_num}: avg_jump={avg_jump:.2f}, drift={drift}, avg_queue_length={avg_queue_length:.2f}")
-    return avg_jump, drift, avg_queue_length
+    print(f"Trial {trial_num}: avg_jump={avg_jump:.2f}, drift={drift}, "
+          f"avg_queue_length={avg_queue_length:.2f}")
+    
+    return {
+        "trial": trial_num,
+        "avg_jump": avg_jump,
+        "drift": drift,
+        "avg_queue_length": avg_queue_length,
+        "vm_1_rate": vm_clock_rates.get(1),
+        "vm_2_rate": vm_clock_rates.get(2),
+        "vm_3_rate": vm_clock_rates.get(3),
+    }
 
 def run_experiment_condition(condition_label, variation_mode, internal_prob, run_time=60, trials=5):
     """
     Runs multiple trials for a given experimental condition and returns
-    the averaged metrics across trials.
+    the averaged metrics across trials, along with trial-by-trial data.
     """
     print("\n========================================")
     print(f"Running experiment: {condition_label}")
@@ -191,23 +232,35 @@ def run_experiment_condition(condition_label, variation_mode, internal_prob, run
         shutil.rmtree(base_log_dir)
     os.makedirs(base_log_dir, exist_ok=True)
     
-    trial_results = {"avg_jump": [], "drift": [], "avg_queue_length": []}
+    trial_data = []
     for trial in range(1, trials+1):
-        avg_jump, drift, avg_q = run_trial(trial, run_time, variation_mode, internal_prob, base_log_dir)
-        trial_results["avg_jump"].append(avg_jump)
-        trial_results["drift"].append(drift)
-        trial_results["avg_queue_length"].append(avg_q)
-    
-    # Average metrics over trials.
-    avg_jump_mean = sum(trial_results["avg_jump"])/len(trial_results["avg_jump"])
-    drift_mean = sum(trial_results["drift"])/len(trial_results["drift"])
-    avg_q_mean = sum(trial_results["avg_queue_length"])/len(trial_results["avg_queue_length"])
-    
-    print(f"Condition [{condition_label}] averaged over {trials} trials:")
+        result = run_trial(trial, run_time, variation_mode, internal_prob, base_log_dir)
+        trial_data.append(result)
+
+    # Aggregate
+    avg_jump_list = [d["avg_jump"] for d in trial_data]
+    drift_list = [d["drift"] for d in trial_data]
+    avg_queue_list = [d["avg_queue_length"] for d in trial_data]
+
+    avg_jump_mean = sum(avg_jump_list) / len(avg_jump_list) if avg_jump_list else 0.0
+    drift_mean = sum(drift_list) / len(drift_list) if drift_list else 0.0
+    avg_q_mean = sum(avg_queue_list) / len(avg_queue_list) if avg_queue_list else 0.0
+
+    print(f"Condition [{condition_label}] over {trials} trials:")
     print(f"  Average Jump Size: {avg_jump_mean:.2f}")
     print(f"  Drift among VMs: {drift_mean}")
-    print(f"  Average Queue Length (RECEIVE events): {avg_q_mean:.2f}")
-    
+    print(f"  Average Queue Length: {avg_q_mean:.2f}")
+
+    # Print a quick table of all trials (including clock rates)
+    print("\nTrial Results:")
+    print("Trial | VM1_Rate | VM2_Rate | VM3_Rate | AvgJump | Drift | AvgQueue")
+    print("------|----------|----------|----------|---------|-------|---------")
+    for d in trial_data:
+        print(f"{d['trial']:5d} | {d['vm_1_rate']:9} | {d['vm_2_rate']:9} | "
+              f"{d['vm_3_rate']:9} | {d['avg_jump']:.2f} | "
+              f"{d['drift']} | {d['avg_queue_length']:.2f}")
+
+    # Return aggregated metrics
     return {
         "avg_jump": avg_jump_mean,
         "drift": drift_mean,
@@ -227,21 +280,21 @@ def plot_summary(results_dict):
     
     fig, axs = plt.subplots(3, 1, figsize=(10, 12))
     
-    # Plot average jump sizes.
+    # Plot average jump sizes
     axs[0].bar(x, avg_jumps, color="skyblue")
     axs[0].set_xticks(x)
     axs[0].set_xticklabels(conditions, rotation=45, ha="right")
     axs[0].set_ylabel("Avg Jump Size")
     axs[0].set_title("Average Logical Clock Jump Size")
     
-    # Plot drift.
+    # Plot drift
     axs[1].bar(x, drifts, color="salmon")
     axs[1].set_xticks(x)
     axs[1].set_xticklabels(conditions, rotation=45, ha="right")
     axs[1].set_ylabel("Drift")
     axs[1].set_title("Drift Among Final Logical Clock Values")
     
-    # Plot average queue length.
+    # Plot average queue length
     axs[2].bar(x, avg_queues, color="lightgreen")
     axs[2].set_xticks(x)
     axs[2].set_xticklabels(conditions, rotation=45, ha="right")
@@ -252,7 +305,7 @@ def plot_summary(results_dict):
     summary_plot_file = "experiment_summary.png"
     plt.savefig(summary_plot_file)
     plt.close()
-    print(f"Summary plot saved as: {summary_plot_file}")
+    print(f"\nSummary plot saved as: {summary_plot_file}")
 
 # ----------------------------
 # Main
@@ -265,7 +318,7 @@ if __name__ == "__main__":
         {"label": "Order Variation Internal Prob 0.1", "variation_mode": "order", "internal_prob": 0.1},
         {"label": "Order Variation Internal Prob 0.3", "variation_mode": "order", "internal_prob": 0.3},
         {"label": "Order Variation Internal Prob 0.5", "variation_mode": "order", "internal_prob": 0.5},
-        {"label": "Order Variation Internal Prob 0.7", "variation_mode": "order", "internal_prob": 0.5},
+        {"label": "Order Variation Internal Prob 0.7", "variation_mode": "order", "internal_prob": 0.7},
         {"label": "Order Variation Internal Prob 0.9", "variation_mode": "order", "internal_prob": 0.9},
         
         {"label": "Small Variation Internal Prob 0.1", "variation_mode": "small", "internal_prob": 0.1},
@@ -274,12 +327,11 @@ if __name__ == "__main__":
         {"label": "Small Variation Internal Prob 0.7", "variation_mode": "small", "internal_prob": 0.7},
         {"label": "Small Variation Internal Prob 0.9", "variation_mode": "small", "internal_prob": 0.9},
     
-        {"label": "Medium Variation Internal Prob 0.1", "variation_mode": "small", "internal_prob": 0.1},
-        {"label": "Medium Variation Internal Prob 0.3", "variation_mode": "small", "internal_prob": 0.3},
-        {"label": "Medium Variation Internal Prob 0.5", "variation_mode": "small", "internal_prob": 0.5},
-        {"label": "Medium Variation Internal Prob 0.7", "variation_mode": "small", "internal_prob": 0.7},
-        {"label": "Medium Variation Internal Prob 0.9", "variation_mode": "small", "internal_prob": 0.9},
-    
+        {"label": "Medium Variation Internal Prob 0.1", "variation_mode": "medium", "internal_prob": 0.1},
+        {"label": "Medium Variation Internal Prob 0.3", "variation_mode": "medium", "internal_prob": 0.3},
+        {"label": "Medium Variation Internal Prob 0.5", "variation_mode": "medium", "internal_prob": 0.5},
+        {"label": "Medium Variation Internal Prob 0.7", "variation_mode": "medium", "internal_prob": 0.7},
+        {"label": "Medium Variation Internal Prob 0.9", "variation_mode": "medium", "internal_prob": 0.9},
     ]
     
     # Each trial runs for 60 seconds and we perform 5 trials per condition.
@@ -288,6 +340,7 @@ if __name__ == "__main__":
     
     overall_results = {}
     
+    # Run each condition sequentially to avoid port conflicts
     for condition in experiment_conditions:
         res = run_experiment_condition(
             condition_label=condition["label"],
@@ -298,6 +351,6 @@ if __name__ == "__main__":
         )
         overall_results[condition["label"]] = res
     
-    # Generate a summary plot comparing all conditions.
+    # Generate a summary plot comparing all conditions
     plot_summary(overall_results)
-    
+    print("\nAll experiments completed.")
